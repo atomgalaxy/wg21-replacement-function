@@ -66,11 +66,12 @@ arguments, just substitute the function that's actually invoked.
 
 We propose a new kind of function definition of the form
 
-_declarator_ `=` _constant-expression_ `;`
+_function-body_:
+  ...
+  `=` _constant-expression_ `;`
 
-where the _declarator_ is a function declarator and the _constant-expression_
-is (evaluates to) a pointer-to-function, pointer-to-member-function, or denotes
-a function (not an overload set).
+where the _constant-expression_ is (evaluates to) a pointer-to-function,
+pointer-to-member-function, or denotes a function (not an overload set).
 
 Example (illustrative):
 
@@ -104,26 +105,24 @@ If overload resolution picks this signature, then, *poof*, instead of
 substituting this signature into the call-expression, the replacement function
 is substituted. If this renders the program ill-formed, so be it.
 
-# Use-cases
+# Why this syntax
 
-- deduce-to-type
-- programming overload resolution
-- expression-equivalent for `std::strong_order`
-- boxing arguments for type-elision
-- interactions with `__builtin_calltarget()`
-- interactions with templates
-- interaction with "fixing surrogate deduction"
-- programmable UFCS if we get pmfs are callable
+- syntax noted actually already exist, just look for =delete
+- it works for `0` as "not-provided" and =delete as no body, consistently
+
+# Nice-to-have properties
+
 - removal of library-defined dispatch from callstacks
 - optimizers have to work way less hard
 - major symbol reduction
-- no issues with expressions - we don't modify expressions.
-- we can finally rename a function (Titus) and not break things
-- we can finally move overload sets around and not break ABI in some cases
-- make example for changing return type of conversion function
-- syntax noted actually already exist, just look for =delete
-- it works for `0` as "not-provided" and =delete as no body, consistently
-- since you can do argument replacement, you can deduce-to-trait and generate witness tables
+- no issues with expressions - we don't modify expressions (compare: parametric expressions)
+- No extra work for overload resolution - this feature has no bearing on
+  overload resolution, as the `@_constant-expression_@` is evaluated at
+  declaration time.
+
+# Use-cases
+
+## deduce-to-type
 
 ```cpp
 struct A {};
@@ -135,6 +134,37 @@ struct Box { T value; };
 string f(A const&) { return "I'm an A"; }
 auto f(std::derives_from<A> auto&&) = static_cast<string(*)(A const&)>(f);
 ```
+
+## programming overload resolution
+## expression-equivalent for `std::strong_order`
+## boxing arguments for type-elision
+## interactions with `__builtin_calltarget()`
+## interactions with templates
+## interaction with "fixing surrogate deduction"
+## programmable UFCS
+
+- if we get pmfs are callable
+
+## The "Rename Function" refactoring becomes possible in large codebases
+
+- we can finally rename a function (as opposed to the whole overload set) and not break things
+
+See talk by Titus Winters (TODO find talk reference).
+
+## The "rename function" refactoring becomes ABI stable
+
+- we can finally move overload sets around and not break ABI in some cases
+  since we basically gain function aliases.
+
+## Changing the return type of a conversion function
+
+- make example for changing return type of conversion function
+
+## Witness tables for wrapper types (a-la Carbon)
+
+- since you can do argument replacement, you can deduce-to-trait and generate witness tables
+
+
 
 ---
 references:
