@@ -1,6 +1,6 @@
 ---
 title: "Replacement function"
-document: P2826R1
+document: D2826R2
 date: today
 audience:
   - EWG
@@ -55,14 +55,32 @@ _function-body_:
   ...
   `=` _constant-expression_ `;`
 
-where the _constant-expression_ evaluates to a pointer-to-function or
-pointer-to-member-function. We will call this function the **target**.
+where the _constant-expression_ is an expression that designates a function
+(such as a reference-to-function or reference-to-member-function).
+
+We will call this function the **target**.
 
 The associated function cannot have been declared previously.
 
 A call expression that resolves to a function thus declared instead resolves to
 the target.
 This may render the program ill-formed.
+
+**Notes:**
+
+- The target need not have the same type as the function declaration that was
+  selected would suggest.
+- This feature is *not* the same as calling the target function from the body
+  (see example with immovable types).
+
+**OPEN QUESTION:** should we allow pointer-to-function and
+pointer-to-member-function too? It's technically a bit weird, type-wise, but syntax-wise it's nicer.
+This paper allows pointer-to-function and pointer-to-member-function, and uses
+it.
+
+**OPEN QUESTION:** what should we call this feature? Function aliases? GDR points
+out that "replacement function" is close to "replacable function", which is a
+term of art already.
 
 ## Example 1: simple free function aliases
 
@@ -138,6 +156,48 @@ Without `__bultin_calltarget`, the computation becomes a *lot* uglier, because
 we need to conjure the function pointer type for each cv-ref qualification, so
 I'm not even going to include it here.
 
+
+## Example 5: immovable argument types
+
+Consider having an argument type that must be in-place constructed:
+
+```cpp
+#include <type_traits>
+#include <utility>
+
+template <typename T>
+struct pin {
+    T value;
+
+    pin(auto&&... vs) 
+        requires(requires { T{std::forward<decltype(vs)>(vs)...}; })
+        : value{std::forward<decltype(vs)>(vs)...} {}
+    pin(pin&&) = delete;
+};
+
+template <typename T>
+void takes_pinned(pin<T> x) {}
+
+template <typename T>
+void takes_pinned_adapter(pin<T> x) {
+    takes_pinned(std::forward<decltype(x)>(x));
+}
+
+template <typename T>
+void takes_pinned_alias(pin<T>) = takes_pinned<T>;
+
+template <typename T>
+void takes_pinned_alias2(T&&) = takes_pinned<std::decay_t<T>>;
+
+int main() {
+    takes_pinned<int>(3); //  what we have to write (A)
+    takes_pinned(3); // what we want to write, errors
+    takes_pinned(pin<int>{3}); // works
+    takes_pinned_adapter(pin<int>{3}); // error, can't forward pin<T>
+    takes_pinned_alias<int>(3); // works with this paper
+    takes_pinned_alias2(3); // also works with this paper, same as line (A)
+}
+```
 
 ## Discussion
 
@@ -423,6 +483,25 @@ and have a new name for an old overload set (as resolved at the declaration of `
 
 - we can finally move overload sets around and not break ABI in some cases
   since we basically gain function aliases.
+
+
+# FAQ
+
+## Can I declare the function with a different return type from the assigned?
+
+Yes. The declared return type (or auto) is used only for overload resolution.
+
+## Why not require `auto` as the return type of the declaration?
+
+There are situations in the language where the return type matters for overload
+resolution.
+
+Examples are conversion operators and explicit casts. See `[temp.deduct.funcaddr/1]`.
+
+
+# Acknowledgements
+
+- Gabriel Dos Reis for pointing out return types do matter for overload resolution.
 
 
 ---
