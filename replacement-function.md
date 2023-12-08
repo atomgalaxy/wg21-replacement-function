@@ -449,6 +449,20 @@ to know the exact function pointer type of the called function is very
 difficult, and needless, since the compiler is very good at resolving function
 calls.
 
+## First-class overload sets
+
+We can lift overload sets into function arguments (as per the point of invocation):
+
+(TODO: propose this syntax...)
+
+```cpp
+auto call(auto&& fn, auto&&... args) -> decltype(auto) {
+    return fn(std::forward<decltype(args)>(args)...);
+}
+
+call([](auto&&...args) = __builtin_caltarget(overloaded(std::forward<decltype(args)>(args)...)));
+```
+
 
 ## programmable UFCS
 
