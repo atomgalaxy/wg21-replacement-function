@@ -21,7 +21,7 @@ Example:
 ```cpp
 int g(int) { return 42; }
 int f(long) { return 43; }
-auto g(unsigned) = &f; // handle unsigned int with f(long)
+auto g(unsigned) = f; // handle unsigned int with f(long)
 
 int main() {
     g(1); // 42
@@ -43,8 +43,7 @@ First, however, this paper introduces what it _does_.
 
 # Status
 
-This paper is in early stages of exploration. The R1 will be presented to EWGI
-in Kona, 2023.
+This paper has been discussed in EWGi and forwarded to EWG.
 
 
 # Proposal
@@ -56,14 +55,16 @@ _function-body_:
   `=` _constant-expression_ `;`
 
 where the _constant-expression_ is an expression that designates a function
-(such as a reference-to-function or reference-to-member-function).
+(such as a reference-to-function or reference-to-member-function, or pointer to
+function or member function).
 
 We will call this function the **target**.
 
-The associated function cannot have been declared previously.
+Such a definition has to be the first declaration.
 
 A call expression that resolves to a function thus declared instead resolves to
 the target.
+
 This may render the program ill-formed.
 
 **Notes:**
@@ -198,6 +199,10 @@ int main() {
     takes_pinned_alias2(3); // also works with this paper, same as line (A)
 }
 ```
+
+## Example 6: `std::strong_order` customization point implementation
+
+See below
 
 ## Discussion
 
